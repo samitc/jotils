@@ -61,6 +61,14 @@
             </plugin>
         </plugins>
     </build>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${maven.testing.junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
@@ -77,6 +85,7 @@
     </modules>
     <properties>
         <java.version>1.8</java.version>
+        <maven.testing.junit.version>4.12</maven.testing.junit.version>
     </properties>
 
 

@@ -6,9 +6,24 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.function.BiConsumer;
 
 public class IoUtils {
+    private static class readHandlerHalper implements BiConsumer<byte[], Integer> {
+        private byte[] data;
+        private int readed;
+        public readHandlerHalper(byte[] data, int startReadCount) {
+            this.data = data;
+            readed = startReadCount;
+        }
+        @Override
+        public void accept(byte[] bytes,Integer size) {
+            System.arraycopy(bytes, 0, data, readed, size);
+            readed += size;
+        }
+    }
     public static final int NO_MAX_BYTE_TO_READ = -1;
     static final int EOF = -1;
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 2;
@@ -26,12 +41,40 @@ public class IoUtils {
     }
 
     public static long read(InputStream input, byte[] data, int size) throws IOException {
-        int curDataPos = 0;
-        return read(input, size, new byte[DEFAULT_BUFFER_SIZE], (bytes, integer) -> System.arraycopy(bytes, 0, data, curDataPos, integer));
+        return read(input, size, new byte[DEFAULT_BUFFER_SIZE], new readHandlerHalper(data,0));
     }
 
     public static void write(OutputStream output, byte[] data, int size) throws IOException {
         write0(output, data, size);
+    }
+
+    public static int read(InputStream input, byte[] data) throws IOException {
+        return read0(input, data, data.length);
+    }
+
+    public static long read(InputStream input, BiConsumer<byte[], Integer> readHandler) throws IOException {
+        return read(input, new byte[DEFAULT_BUFFER_SIZE], readHandler);
+    }
+
+    public static byte[] read(InputStream input) throws IOException {
+        final List<byte[]> readedData = new ArrayList<>();
+        final List<Integer> readedSize = new ArrayList<>();
+        int sumRead = 0;
+        int curCount;
+        byte[] data = new byte[DEFAULT_BUFFER_SIZE];
+        while (EOF != (curCount = read(input, data))) {
+            readedData.add(data);
+            readedSize.add(curCount);
+            sumRead += curCount;
+            data = new byte[DEFAULT_BUFFER_SIZE];
+        }
+        byte[] combineData = new byte[sumRead];
+        int curCopyCount = 0;
+        for (int i = 0; i < readedData.size(); i++) {
+            System.arraycopy(readedData.get(i), 0, combineData, curCopyCount, readedSize.get(i));
+            curCopyCount += readedSize.get(i);
+        }
+        return combineData;
     }
 
     public static long read(InputStream input, byte[] data, BiConsumer<byte[], Integer> readHandler) throws IOException {
@@ -109,6 +152,6 @@ public class IoUtils {
     }
 
     public static long copy(InputStream input, OutputStream output) throws IOException {
-        return copy(input, output, NO_MAX_BYTE_TO_READ, new byte[DEFAULT_BUFFER_SIZE]);
+        return copy(input, output, NO_MAX_BYTE_TO_READ);
     }
 }
