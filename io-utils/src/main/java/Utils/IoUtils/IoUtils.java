@@ -165,15 +165,11 @@ public class IoUtils {
         return copy(input, output, NO_MAX_BYTE_TO_READ);
     }
 
-    private static void readHandler(AsynchronousByteChannel channel, int bytesToRead, BiConsumer<byte[], Integer> callBack, CompletionHandler<Integer, Object> handler, ByteBuffer buffer) {
-        if (channel.isOpen()) {
-            if (buffer.hasRemaining()) {
-                channel.read(buffer, null, handler);
-            } else {
-                callBack.accept(createBufForCallBack(buffer), bytesToRead);
-            }
+    private static void readHandler(AsynchronousByteChannel channel, int byteReaded, int bytesToRead, BiConsumer<byte[], Integer> callBack, CompletionHandler<Integer, Object> handler, ByteBuffer buffer) {
+        if (channel.isOpen() && buffer.hasRemaining() && byteReaded != EOF) {
+            channel.read(buffer, null, handler);
         } else {
-            callBack.accept(createBufForCallBack(buffer), bytesToRead);
+            callBack.accept(createBufForCallBack(buffer), buffer.position());
         }
     }
 
@@ -195,12 +191,12 @@ public class IoUtils {
             channel.read(buffer, null, new CompletionHandler<Integer, Object>() {
                 @Override
                 public void completed(Integer result, Object attachment) {
-                    readHandler(channel, bytesToRead, callBack, this, buffer);
+                    readHandler(channel, result, bytesToRead, callBack, this, buffer);
                 }
 
                 @Override
                 public void failed(Throwable exc, Object attachment) {
-                    readHandler(channel, bytesToRead, callBack, this, buffer);
+                    readHandler(channel, 0, bytesToRead, callBack, this, buffer);
                 }
             });
         }
@@ -212,12 +208,12 @@ public class IoUtils {
             channel.read(buffer, null, new CompletionHandler<Integer, Object>() {
                 @Override
                 public void completed(Integer result, Object attachment) {
-                    readHandler(channel, bytesToRead, callBack, this, buffer);
+                    readHandler(channel, result, bytesToRead, callBack, this, buffer);
                 }
 
                 @Override
                 public void failed(Throwable exc, Object attachment) {
-                    exceptionHandler.accept(createBufForCallBack(buffer), bytesToRead, exc);
+                    exceptionHandler.accept(createBufForCallBack(buffer), buffer.position(), exc);
                 }
             });
         }
